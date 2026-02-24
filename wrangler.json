@@ -3,12 +3,27 @@
 	"name": "bakingwithnan",
 	"main": "./workers/app.ts",
 	"compatibility_date": "2025-10-08",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"observability": {
 		"enabled": true
 	},
 	"upload_source_maps": true,
 	"vars": {
 		"VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare"
-	}
+	},
+	"d1_databases": [
+		{
+			"binding": "bakingwithnan_db",
+			"database_name": "bakingwithnan-db",
+			"database_id": "0029d1dd-c2d9-4356-a4d8-cf0efc609a3c"
+		}
+	],
+	"r2_buckets": [
+		{
+			"bucket_name": "bakingwithnan-images",
+			"binding": "bakingwithnan_images"
+		}
+	]
 }
