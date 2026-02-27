@@ -39,21 +39,21 @@ export default function AdminLogin({ actionData }: Route.ComponentProps) {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <main className="min-h-screen bg-amber-50 flex items-center justify-center p-4">
-      <div className="bg-white border-2 border-amber-200 rounded-sm shadow-lg p-8 w-full max-w-sm">
+    <main className="min-h-screen bg-[#1c1b1a] flex items-center justify-center p-4">
+      <div className="bg-[#2a241b] border-2 border-[#3a2818] rounded-sm shadow-lg p-8 w-full max-w-sm">
         <h1
-          className="text-2xl font-bold text-amber-900 text-center mb-2"
+          className="text-2xl font-bold text-[#f5f5f5] text-center mb-2"
           style={{ fontFamily: "Georgia, serif" }}
         >
           Baking with Nan
         </h1>
-        <p className="text-center text-amber-700 text-sm mb-6">Admin access</p>
+        <p className="text-center text-[#9f6b43] text-sm mb-6">Admin access</p>
 
         {actionData?.success ? (
-          <div className="text-center text-amber-800 text-sm">
+          <div className="text-center text-[#dedede] text-sm">
             <p className="text-2xl mb-3">📬</p>
             <p>Check your email for a login link.</p>
-            <p className="text-amber-500 text-xs mt-2">
+            <p className="text-[#a3978c] text-xs mt-2">
               It expires in 15 minutes.
             </p>
           </div>
@@ -67,7 +67,7 @@ export default function AdminLogin({ actionData }: Route.ComponentProps) {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm text-amber-800 mb-1"
+                className="block text-sm text-[#dedede] mb-1"
               >
                 Email address
               </label>
@@ -77,13 +77,13 @@ export default function AdminLogin({ actionData }: Route.ComponentProps) {
                 type="email"
                 required
                 autoComplete="email"
-                className="w-full border border-amber-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+                className="w-full border border-[#3a2818] bg-[#1c1b1a] text-[#dedede] rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-[#9f6b43]"
               />
             </div>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-amber-800 hover:bg-amber-900 text-white text-sm py-2 px-4 rounded-sm transition-colors disabled:opacity-50"
+              className="bg-[#3a2818] hover:bg-[#5c4d3c] text-[#f5f5f5] text-sm py-2 px-4 rounded-sm transition-colors disabled:opacity-50"
             >
               {isSubmitting ? "Sending…" : "Send login link"}
             </button>
