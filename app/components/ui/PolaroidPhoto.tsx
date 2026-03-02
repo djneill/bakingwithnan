@@ -1,3 +1,5 @@
+import { ThumbTack } from "~/components/ui/ThumbTack";
+
 interface PolaroidPhotoProps {
   src: string;
   alt: string;
@@ -28,13 +30,7 @@ export function PolaroidPhoto({
       onClick={onClick}
     >
       {/* Thumbtack */}
-      <div
-        className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 w-6 h-6 rounded-full"
-        style={{
-          background: "radial-gradient(circle at 35% 35%, #ef4444, #7f1d1d)",
-          boxShadow: "1px 2px 6px rgba(0,0,0,0.5)",
-        }}
-      />
+      <ThumbTack />
       <img src={src} alt={alt} className="w-full h-auto" />
       {caption && (
         <p className="absolute bottom-2.5 left-0 right-0 text-center font-handwriting text-sm text-gray-400">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { ThumbTack } from "~/components/ui/ThumbTack";
 
 export function RecipeCardViewer({ keys }: { keys: (string | null)[] }) {
   const validKeys = keys.filter(Boolean) as string[];
@@ -27,13 +28,7 @@ export function RecipeCardViewer({ keys }: { keys: (string | null)[] }) {
           }}
         >
           {/* Thumbtack */}
-          <div
-            className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 w-6 h-6 rounded-full"
-            style={{
-              background: "radial-gradient(circle at 35% 35%, #ef4444, #7f1d1d)",
-              boxShadow: "1px 2px 6px rgba(0,0,0,0.5)",
-            }}
-          />
+          <ThumbTack />
           <img
             src={`/api/images/${validKeys[active]}`}
             alt={`Recipe card ${active + 1}`}
