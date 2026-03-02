@@ -3,7 +3,7 @@ import { redirect } from "react-router";
 import { motion } from "motion/react";
 import type { Route } from "./+types/admin._index";
 import { requireAdmin } from "~/lib/auth.server";
-import { useInactivityLogout } from "~/hooks/useInactivityLogout";
+import { useInactivityLogout } from "~/hooks/Useinactivitylogout";
 import type { Recipe } from "~/types/recipe";
 import { PageShell } from "~/components/ui/PageShell";
 import { AdminHeader } from "~/components/admin/AdminHeader";
@@ -77,7 +77,11 @@ export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
   return (
     <PageShell>
       <AdminHeader
-        title={<>Baking with <span className="italic text-accent">Nan</span></>}
+        title={
+          <>
+            Baking with <span className="italic text-accent">Nan</span>
+          </>
+        }
         backTo="/"
         backLabel="← View site"
       />
