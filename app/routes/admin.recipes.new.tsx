@@ -1,31 +1,17 @@
-import { Form, useNavigation, Link } from "react-router";
+import { Form, useNavigation } from "react-router";
 import { redirect } from "react-router";
 import { motion } from "motion/react";
 import type { Route } from "./+types/admin.recipes.new";
 import { requireAdmin } from "~/lib/auth.server";
 import { useInactivityLogout } from "~/hooks/useInactivityLogout";
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
-
-async function uploadImage(
-  bucket: R2Bucket,
-  file: File,
-  prefix: string,
-): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const key = `${prefix}/${crypto.randomUUID()}.${ext}`;
-  await bucket.put(key, file.stream(), {
-    httpMetadata: { contentType: file.type || "image/jpeg" },
-  });
-  return key;
-}
+import { slugify, uploadImage } from "~/lib/recipes.server";
+import { PageShell } from "~/components/ui/PageShell";
+import { AdminHeader } from "~/components/admin/AdminHeader";
+import { FormError } from "~/components/admin/FormError";
+import { FileInput } from "~/components/admin/FileInput";
+import { RecipeNameInput } from "~/components/admin/RecipeNameInput";
+import { SubmitButton } from "~/components/admin/SubmitButton";
+import { SectionDivider } from "~/components/ui/SectionDivider";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   await requireAdmin(context.cloudflare.env.bakingwithnan_db, request);
@@ -83,97 +69,10 @@ export async function action({ request, context }: Route.ActionArgs) {
       `INSERT INTO recipes (name, slug, dish_image, card_image1, card_image2, card_image3, card_image4)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(
-      name,
-      slug,
-      dish_image,
-      card_image1,
-      card_image2,
-      card_image3,
-      card_image4,
-    )
+    .bind(name, slug, dish_image, card_image1, card_image2, card_image3, card_image4)
     .run();
 
   throw redirect("/admin");
-}
-
-export function links() {
-  return [
-    {
-      rel: "stylesheet",
-      href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@300;400;500;600&display=swap",
-    },
-  ];
-}
-
-function FileInput({
-  name,
-  label,
-  required = false,
-  hint,
-}: {
-  name: string;
-  label: string;
-  required?: boolean;
-  hint?: string;
-}) {
-  return (
-    <div>
-      <label
-        htmlFor={name}
-        className="block text-sm mb-2"
-        style={{ color: "#dedede" }}
-      >
-        {label}
-        {required && (
-          <span className="ml-1" style={{ color: "#9f6b43" }}>
-            *
-          </span>
-        )}
-      </label>
-      {hint && (
-        <p className="text-xs mb-2 font-light" style={{ color: "#8b684e" }}>
-          {hint}
-        </p>
-      )}
-      <label
-        htmlFor={name}
-        className="flex flex-col items-center justify-center w-full h-32 rounded-xl cursor-pointer transition-all border-2 border-dashed"
-        style={{ borderColor: "#3a2818", background: "#1c1b1a" }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = "#9f6b43";
-          (e.currentTarget as HTMLElement).style.background = "#201e1c";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = "#3a2818";
-          (e.currentTarget as HTMLElement).style.background = "#1c1b1a";
-        }}
-      >
-        <span className="text-2xl mb-1">📷</span>
-        <span className="text-xs font-light" style={{ color: "#8b684e" }}>
-          Click to choose image
-        </span>
-        <input
-          id={name}
-          name={name}
-          type="file"
-          accept="image/*"
-          className="sr-only"
-          required={required}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            const span = e.target
-              .closest("label")
-              ?.querySelector("span:last-of-type");
-            if (span) {
-              span.textContent = file ? file.name : "Click to choose image";
-              (span as HTMLElement).style.color = file ? "#b58a66" : "#8b684e";
-            }
-          }}
-        />
-      </label>
-    </div>
-  );
 }
 
 export default function NewRecipe({ actionData }: Route.ComponentProps) {
@@ -182,52 +81,8 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
   useInactivityLogout();
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: "#1c1b1a", fontFamily: "'Outfit', sans-serif" }}
-    >
-      <header
-        className="border-b px-8 py-5 flex items-center justify-between"
-        style={{ borderColor: "#3a2818" }}
-      >
-        <div>
-          <p
-            className="text-xs tracking-[0.2em] uppercase mb-0.5"
-            style={{ color: "#9f6b43" }}
-          >
-            Admin
-          </p>
-          <h1
-            className="text-xl"
-            style={{
-              fontFamily: "'Playfair Display', serif",
-              color: "#f5f5f5",
-            }}
-          >
-            Add a Recipe
-          </h1>
-        </div>
-        <div className="flex items-center gap-5">
-          <Link
-            to="/admin"
-            className="text-sm transition-colors"
-            style={{ color: "#8b684e" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#dedede")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#8b684e")}
-          >
-            ← Dashboard
-          </Link>
-          <Link
-            to="/admin/logout"
-            className="text-sm transition-colors"
-            style={{ color: "#8b684e" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#8b684e")}
-          >
-            Log out
-          </Link>
-        </div>
-      </header>
+    <PageShell>
+      <AdminHeader title="Add a Recipe" />
 
       <main className="max-w-2xl mx-auto px-8 py-12">
         <motion.div
@@ -235,58 +90,16 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {actionData?.error && (
-            <div
-              className="mb-6 px-5 py-4 rounded-xl text-sm"
-              style={{
-                background: "#3d1a1a",
-                color: "#f87171",
-                border: "1px solid #7f1d1d",
-              }}
-            >
-              {actionData.error}
-            </div>
-          )}
+          <FormError message={actionData?.error} />
 
           <Form
             method="post"
             encType="multipart/form-data"
             className="flex flex-col gap-8"
           >
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm mb-2"
-                style={{ color: "#dedede" }}
-              >
-                Recipe Name <span style={{ color: "#9f6b43" }}>*</span>
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                placeholder="e.g. Chocolate Chip Cookies"
-                className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all"
-                style={{
-                  background: "#2a241b",
-                  border: "1px solid #3a2818",
-                  color: "#dedede",
-                  fontFamily: "'Outfit', sans-serif",
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#9f6b43";
-                  e.currentTarget.style.boxShadow =
-                    "0 0 0 2px rgba(159,107,67,0.2)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#3a2818";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              />
-            </div>
+            <RecipeNameInput />
 
-            <div className="border-t" style={{ borderColor: "#3a2818" }} />
+            <div className="border-t border-border" />
 
             <FileInput
               name="dish_image"
@@ -294,17 +107,7 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
               hint="A photo of the finished dish. If skipped, a placeholder will be shown."
             />
 
-            <div
-              style={{ borderColor: "#3a2818" }}
-              className="border-t relative"
-            >
-              <p
-                className="absolute -top-3 left-4 px-3 text-xs tracking-widest uppercase"
-                style={{ background: "#1c1b1a", color: "#9f6b43" }}
-              >
-                Recipe Cards
-              </p>
-            </div>
+            <SectionDivider label="Recipe Cards" />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <FileInput name="card_image1" label="Recipe Card 1" required />
@@ -313,34 +116,10 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
               <FileInput name="card_image4" label="Recipe Card 4" />
             </div>
 
-            <div className="pt-4 flex items-center gap-4">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-8 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
-                style={{ background: "#9f6b43", color: "#f5f5f5" }}
-                onMouseEnter={(e) => {
-                  if (!isSubmitting)
-                    (e.currentTarget as HTMLElement).style.background =
-                      "#b58a66";
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSubmitting)
-                    (e.currentTarget as HTMLElement).style.background =
-                      "#9f6b43";
-                }}
-              >
-                {isSubmitting ? "Saving…" : "Save Recipe"}
-              </button>
-              {isSubmitting && (
-                <p className="text-sm font-light" style={{ color: "#8b684e" }}>
-                  Uploading images, this may take a moment…
-                </p>
-              )}
-            </div>
+            <SubmitButton isSubmitting={isSubmitting} />
           </Form>
         </motion.div>
       </main>
-    </div>
+    </PageShell>
   );
 }

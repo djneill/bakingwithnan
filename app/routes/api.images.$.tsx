@@ -1,15 +1,15 @@
-import type { Route } from "./+types/api.images.$key";
+import type { Route } from "./+types/api.images.$";
 
 /**
  * Serve images from R2 bucket.
- * Route: /api/images/:key
+ * Route: /api/images/*
  *
- * Supports simple key paths. If you stored images with folder prefixes
- * (e.g. "recipes/abc123.jpg"), add a splat param instead.
+ * Supports keys with folder prefixes, e.g. "dishes/abc123.jpg" or
+ * "cards/abc123.jpg", which are stored as-is in R2.
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const r2 = context.cloudflare.env.bakingwithnan_images;
-  const key = params.key;
+  const key = params["*"];
 
   if (!key) {
     return new Response("Not found", { status: 404 });

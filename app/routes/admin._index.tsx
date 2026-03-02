@@ -1,21 +1,13 @@
-import { Link, Form, useNavigation } from "react-router";
+import { Link } from "react-router";
 import { redirect } from "react-router";
 import { motion } from "motion/react";
 import type { Route } from "./+types/admin._index";
 import { requireAdmin } from "~/lib/auth.server";
 import { useInactivityLogout } from "~/hooks/useInactivityLogout";
-
-interface Recipe {
-  id: number;
-  slug: string;
-  name: string;
-  dish_image: string | null;
-  card_image1: string;
-  card_image2: string | null;
-  card_image3: string | null;
-  card_image4: string | null;
-  created_at: string;
-}
+import type { Recipe } from "~/types/recipe";
+import { PageShell } from "~/components/ui/PageShell";
+import { AdminHeader } from "~/components/admin/AdminHeader";
+import { DeleteButton } from "~/components/admin/DeleteButton";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { env } = context.cloudflare;
@@ -78,129 +70,28 @@ export async function action({ request, context }: Route.ActionArgs) {
   throw redirect("/admin");
 }
 
-export function links() {
-  return [
-    {
-      rel: "stylesheet",
-      href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@300;400;500;600&display=swap",
-    },
-  ];
-}
-
-function DeleteButton({ slug, name }: { slug: string; name: string }) {
-  const navigation = useNavigation();
-  const isDeleting =
-    navigation.state === "submitting" &&
-    navigation.formData?.get("slug") === slug &&
-    navigation.formData?.get("intent") === "delete";
-
-  return (
-    <Form
-      method="post"
-      onSubmit={(e) => {
-        if (!confirm(`Delete "${name}"? This cannot be undone.`)) {
-          e.preventDefault();
-        }
-      }}
-    >
-      <input type="hidden" name="intent" value="delete" />
-      <input type="hidden" name="slug" value={slug} />
-      <button
-        type="submit"
-        disabled={isDeleting}
-        className="text-xs px-3 py-1.5 rounded-lg transition-all disabled:opacity-40"
-        style={{
-          background: "#3d1a1a",
-          color: "#f87171",
-          border: "1px solid #7f1d1d",
-        }}
-        onMouseEnter={(e) =>
-          ((e.currentTarget as HTMLElement).style.background = "#7f1d1d")
-        }
-        onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLElement).style.background = "#3d1a1a")
-        }
-      >
-        {isDeleting ? "Deleting…" : "Delete"}
-      </button>
-    </Form>
-  );
-}
-
 export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
   const { recipes } = loaderData;
   useInactivityLogout();
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: "#1c1b1a", fontFamily: "'Outfit', sans-serif" }}
-    >
-      <header
-        className="border-b px-8 py-5 flex items-center justify-between"
-        style={{ borderColor: "#3a2818" }}
-      >
-        <div>
-          <p
-            className="text-xs tracking-[0.2em] uppercase mb-0.5"
-            style={{ color: "#9f6b43" }}
-          >
-            Admin
-          </p>
-          <h1
-            className="text-xl"
-            style={{
-              fontFamily: "'Playfair Display', serif",
-              color: "#f5f5f5",
-            }}
-          >
-            Baking with{" "}
-            <span className="italic" style={{ color: "#9f6b43" }}>
-              Nan
-            </span>
-          </h1>
-        </div>
-        <div className="flex items-center gap-5">
-          <Link
-            to="/"
-            className="text-sm transition-colors"
-            style={{ color: "#8b684e" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#dedede")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#8b684e")}
-          >
-            ← View site
-          </Link>
-          <Link
-            to="/admin/logout"
-            className="text-sm transition-colors"
-            style={{ color: "#8b684e" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#8b684e")}
-          >
-            Log out
-          </Link>
-        </div>
-      </header>
+    <PageShell>
+      <AdminHeader
+        title={<>Baking with <span className="italic text-accent">Nan</span></>}
+        backTo="/"
+        backLabel="← View site"
+      />
 
       <main className="max-w-3xl mx-auto px-8 py-12">
         <div className="flex items-center justify-between mb-8">
-          <p
-            className="italic text-lg"
-            style={{
-              fontFamily: "'Playfair Display', serif",
-              color: "#b58a66",
-            }}
-          >
+          <p className="italic text-lg font-display text-accent-light">
             {recipes.length === 0
               ? "No recipes yet"
               : `${recipes.length} ${recipes.length === 1 ? "recipe" : "recipes"} in Nan's kitchen`}
           </p>
           <Link
             to="/admin/recipes/new"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
-            style={{ background: "#9f6b43", color: "#f5f5f5" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#b58a66")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#9f6b43")}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all bg-accent text-text-primary hover:bg-accent-light"
           >
             <span>+</span> Add Recipe
           </Link>
@@ -210,11 +101,10 @@ export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-24 rounded-2xl"
-            style={{ border: "2px dashed #3a2818" }}
+            className="text-center py-24 rounded-2xl border-2 border-dashed border-border"
           >
             <p className="text-4xl mb-4">🧁</p>
-            <p style={{ color: "#8b684e" }}>
+            <p className="text-accent-muted">
               Add Nan's first recipe to get started.
             </p>
           </motion.div>
@@ -226,14 +116,9 @@ export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.04 }}
-                className="flex items-center gap-4 px-6 py-4 rounded-2xl"
-                style={{ background: "#2a241b", border: "1px solid #3a2818" }}
+                className="flex items-center gap-4 px-6 py-4 rounded-2xl bg-surface-raised border border-border"
               >
-                {/* Thumbnail */}
-                <div
-                  className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0"
-                  style={{ background: "#1c1b1a" }}
-                >
+                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-surface">
                   {recipe.dish_image ? (
                     <img
                       src={`/api/images/${recipe.dish_image}`}
@@ -247,18 +132,11 @@ export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
                   )}
                 </div>
 
-                {/* Name + date */}
                 <div className="flex-1 min-w-0">
-                  <p
-                    className="truncate"
-                    style={{
-                      color: "#f5f5f5",
-                      fontFamily: "'Playfair Display', serif",
-                    }}
-                  >
+                  <p className="truncate text-text-primary font-display">
                     {recipe.name}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: "#8b684e" }}>
+                  <p className="text-xs mt-0.5 text-accent-muted">
                     {new Date(recipe.created_at).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "short",
@@ -267,26 +145,10 @@ export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
                   </p>
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Link
                     to={`/admin/recipes/${recipe.slug}/edit`}
-                    className="text-xs px-3 py-1.5 rounded-lg transition-all"
-                    style={{
-                      background: "#2a241b",
-                      color: "#b58a66",
-                      border: "1px solid #3a2818",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor =
-                        "#9f6b43";
-                      (e.currentTarget as HTMLElement).style.color = "#f5f5f5";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor =
-                        "#3a2818";
-                      (e.currentTarget as HTMLElement).style.color = "#b58a66";
-                    }}
+                    className="text-xs px-3 py-1.5 rounded-lg transition-all bg-surface-raised text-accent-light border border-border hover:border-accent hover:text-text-primary"
                   >
                     Edit
                   </Link>
@@ -297,6 +159,6 @@ export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
           </div>
         )}
       </main>
-    </div>
+    </PageShell>
   );
 }
