@@ -10,6 +10,34 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 
+export async function loader({ request }: Route.LoaderArgs) {
+	const url = new URL(request.url);
+	return { origin: url.origin };
+}
+
+type RootLoaderData = { origin: string };
+
+export function meta({ data, matches }: Route.MetaArgs) {
+	const rootMatch = matches?.find((m) => m?.id === "root");
+	const rootData = (data ?? rootMatch?.data) as RootLoaderData | undefined;
+	const origin = rootData?.origin ?? "";
+	const imageUrl = origin ? `${origin}/openGraph.png` : "/openGraph.png";
+	const pageUrl = origin ? `${origin}/` : "/";
+
+	return [
+		{ title: "Baking with Nan" },
+		{ name: "description", content: "A lifetime of love, baked into every recipe." },
+		{ name: "robots", content: "noindex" },
+		{ property: "og:type", content: "website" },
+		{ property: "og:title", content: "Baking with Nan" },
+		{ property: "og:description", content: "A lifetime of love, baked into every recipe." },
+		{ property: "og:image", content: imageUrl },
+		{ property: "og:url", content: pageUrl },
+		{ name: "twitter:card", content: "summary_large_image" },
+		{ name: "twitter:image", content: imageUrl },
+	];
+}
+
 export const links: Route.LinksFunction = () => [
 	{ rel: "preconnect", href: "https://fonts.googleapis.com" },
 	{
