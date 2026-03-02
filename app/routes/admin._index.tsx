@@ -3,7 +3,7 @@ import { redirect } from "react-router";
 import { motion } from "motion/react";
 import type { Route } from "./+types/admin._index";
 import { requireAdmin } from "~/lib/auth.server";
-import { useInactivityLogout } from "~/hooks/Useinactivitylogout";
+import { useInactivityLogout } from "~/hooks/useInactivityLogout";
 import type { Recipe } from "~/types/recipe";
 import { PageShell } from "~/components/ui/PageShell";
 import { AdminHeader } from "~/components/admin/AdminHeader";
