@@ -34,11 +34,11 @@ export function RecipeCardViewer({ keys }: { keys: (string | null)[] }) {
             alt={`Recipe card ${active + 1}`}
             className="w-full h-auto"
           />
-          <p className="absolute bottom-3 right-4 text-xs font-handwriting text-gray-400">
+          <p className="absolute bottom-3 right-4 text-sm font-handwriting text-gray-400">
             click to enlarge
           </p>
           {validKeys.length > 1 && (
-            <p className="absolute bottom-3 left-4 text-xs font-handwriting text-gray-400">
+            <p className="absolute bottom-3 left-4 text-sm font-handwriting text-gray-400">
               Card {active + 1} of {validKeys.length}
             </p>
           )}

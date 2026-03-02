@@ -33,7 +33,7 @@ export function PolaroidPhoto({
       <ThumbTack />
       <img src={src} alt={alt} className="w-full h-auto" />
       {caption && (
-        <p className="absolute bottom-2.5 left-0 right-0 text-center font-handwriting text-sm text-gray-400">
+        <p className="absolute bottom-2.5 left-0 right-0 text-center font-handwriting text-base text-gray-400">
           {caption}
         </p>
       )}
