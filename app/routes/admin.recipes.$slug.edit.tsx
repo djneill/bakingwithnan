@@ -1,9 +1,20 @@
 import { Form, useNavigation, Link } from "react-router";
-import { redirect } from "react-router";
+import { redirect, data } from "react-router";
 import { motion } from "motion/react";
-import type { Route } from "./+types/admin.recipes.new";
+import type { Route } from "./+types/admin.recipes.$slug.edit";
 import { requireAdmin } from "~/lib/auth.server";
 import { useInactivityLogout } from "~/hooks/useInactivityLogout";
+
+interface Recipe {
+  id: number;
+  slug: string;
+  name: string;
+  dish_image: string | null;
+  card_image1: string;
+  card_image2: string | null;
+  card_image3: string | null;
+  card_image4: string | null;
+}
 
 function slugify(name: string): string {
   return name
@@ -27,70 +38,135 @@ async function uploadImage(
   return key;
 }
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-  await requireAdmin(context.cloudflare.env.bakingwithnan_db, request);
-  return {};
+async function replaceImage(
+  bucket: R2Bucket,
+  newFile: File,
+  oldKey: string | null,
+  prefix: string,
+): Promise<string> {
+  if (oldKey) await bucket.delete(oldKey);
+  return uploadImage(bucket, newFile, prefix);
 }
 
-export async function action({ request, context }: Route.ActionArgs) {
+export async function loader({ request, params, context }: Route.LoaderArgs) {
   const { env } = context.cloudflare;
   await requireAdmin(env.bakingwithnan_db, request);
+
+  const recipe = await env.bakingwithnan_db
+    .prepare(
+      "SELECT id, slug, name, dish_image, card_image1, card_image2, card_image3, card_image4 FROM recipes WHERE slug = ? LIMIT 1",
+    )
+    .bind(params.slug)
+    .first<Recipe>();
+
+  if (!recipe) throw data("Recipe not found", { status: 404 });
+
+  return { recipe };
+}
+
+export async function action({ request, params, context }: Route.ActionArgs) {
+  const { env } = context.cloudflare;
+  await requireAdmin(env.bakingwithnan_db, request);
+
+  const recipe = await env.bakingwithnan_db
+    .prepare(
+      "SELECT id, slug, name, dish_image, card_image1, card_image2, card_image3, card_image4 FROM recipes WHERE slug = ? LIMIT 1",
+    )
+    .bind(params.slug)
+    .first<Recipe>();
+
+  if (!recipe) throw data("Recipe not found", { status: 404 });
 
   const formData = await request.formData();
   const name = String(formData.get("name") ?? "").trim();
 
   if (!name) return { error: "Recipe name is required." };
 
-  const card1File = formData.get("card_image1") as File | null;
-  if (!card1File || card1File.size === 0) {
-    return { error: "At least one recipe card image is required." };
-  }
-
-  let slug = slugify(name);
-  const existing = await env.bakingwithnan_db
-    .prepare("SELECT id FROM recipes WHERE slug = ?")
-    .bind(slug)
-    .first();
-  if (existing) slug = `${slug}-${Date.now()}`;
-
   const bucket = env.bakingwithnan_images;
 
-  let dish_image: string | null = null;
+  // Handle dish image — replace if a new file was provided
+  let dish_image = recipe.dish_image;
   const dishFile = formData.get("dish_image") as File | null;
   if (dishFile && dishFile.size > 0) {
-    dish_image = await uploadImage(bucket, dishFile, "dishes");
+    dish_image = await replaceImage(
+      bucket,
+      dishFile,
+      recipe.dish_image,
+      "dishes",
+    );
   }
 
-  const card_image1 = await uploadImage(bucket, card1File, "cards");
+  // card_image1 — required to exist but only replaced if new file uploaded
+  let card_image1 = recipe.card_image1;
+  const card1File = formData.get("card_image1") as File | null;
+  if (card1File && card1File.size > 0) {
+    card_image1 = await replaceImage(
+      bucket,
+      card1File,
+      recipe.card_image1,
+      "cards",
+    );
+  }
 
-  let card_image2: string | null = null;
+  let card_image2 = recipe.card_image2;
   const card2File = formData.get("card_image2") as File | null;
-  if (card2File && card2File.size > 0)
-    card_image2 = await uploadImage(bucket, card2File, "cards");
+  if (card2File && card2File.size > 0) {
+    card_image2 = await replaceImage(
+      bucket,
+      card2File,
+      recipe.card_image2,
+      "cards",
+    );
+  }
 
-  let card_image3: string | null = null;
+  let card_image3 = recipe.card_image3;
   const card3File = formData.get("card_image3") as File | null;
-  if (card3File && card3File.size > 0)
-    card_image3 = await uploadImage(bucket, card3File, "cards");
+  if (card3File && card3File.size > 0) {
+    card_image3 = await replaceImage(
+      bucket,
+      card3File,
+      recipe.card_image3,
+      "cards",
+    );
+  }
 
-  let card_image4: string | null = null;
+  let card_image4 = recipe.card_image4;
   const card4File = formData.get("card_image4") as File | null;
-  if (card4File && card4File.size > 0)
-    card_image4 = await uploadImage(bucket, card4File, "cards");
+  if (card4File && card4File.size > 0) {
+    card_image4 = await replaceImage(
+      bucket,
+      card4File,
+      recipe.card_image4,
+      "cards",
+    );
+  }
+
+  // Re-slug if name changed (check uniqueness)
+  let newSlug = slugify(name);
+  if (newSlug !== recipe.slug) {
+    const conflict = await env.bakingwithnan_db
+      .prepare("SELECT id FROM recipes WHERE slug = ? AND id != ?")
+      .bind(newSlug, recipe.id)
+      .first();
+    if (conflict) newSlug = `${newSlug}-${Date.now()}`;
+  }
 
   await env.bakingwithnan_db
     .prepare(
-      `INSERT INTO recipes (name, slug, dish_image, card_image1, card_image2, card_image3, card_image4)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `UPDATE recipes
+       SET name = ?, slug = ?, dish_image = ?, card_image1 = ?, card_image2 = ?, card_image3 = ?, card_image4 = ?,
+           updated_at = datetime('now')
+       WHERE id = ?`,
     )
     .bind(
       name,
-      slug,
+      newSlug,
       dish_image,
       card_image1,
       card_image2,
       card_image3,
       card_image4,
+      recipe.id,
     )
     .run();
 
@@ -111,12 +187,16 @@ function FileInput({
   label,
   required = false,
   hint,
+  currentKey,
 }: {
   name: string;
   label: string;
   required?: boolean;
   hint?: string;
+  currentKey?: string | null;
 }) {
+  const hasExisting = Boolean(currentKey);
+
   return (
     <div>
       <label
@@ -136,9 +216,24 @@ function FileInput({
           {hint}
         </p>
       )}
+
+      {/* Current image preview */}
+      {hasExisting && (
+        <div
+          className="mb-2 rounded-lg overflow-hidden w-24 h-24"
+          style={{ background: "#1c1b1a" }}
+        >
+          <img
+            src={`/api/images/${currentKey}`}
+            alt="Current"
+            className="w-full h-full object-cover opacity-70"
+          />
+        </div>
+      )}
+
       <label
         htmlFor={name}
-        className="flex flex-col items-center justify-center w-full h-32 rounded-xl cursor-pointer transition-all border-2 border-dashed"
+        className="flex flex-col items-center justify-center w-full h-28 rounded-xl cursor-pointer transition-all border-2 border-dashed"
         style={{ borderColor: "#3a2818", background: "#1c1b1a" }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLElement).style.borderColor = "#9f6b43";
@@ -149,9 +244,9 @@ function FileInput({
           (e.currentTarget as HTMLElement).style.background = "#1c1b1a";
         }}
       >
-        <span className="text-2xl mb-1">📷</span>
+        <span className="text-xl mb-1">{hasExisting ? "🔄" : "📷"}</span>
         <span className="text-xs font-light" style={{ color: "#8b684e" }}>
-          Click to choose image
+          {hasExisting ? "Click to replace" : "Click to choose image"}
         </span>
         <input
           id={name}
@@ -159,14 +254,17 @@ function FileInput({
           type="file"
           accept="image/*"
           className="sr-only"
-          required={required}
           onChange={(e) => {
             const file = e.target.files?.[0];
             const span = e.target
               .closest("label")
               ?.querySelector("span:last-of-type");
             if (span) {
-              span.textContent = file ? file.name : "Click to choose image";
+              span.textContent = file
+                ? file.name
+                : hasExisting
+                  ? "Click to replace"
+                  : "Click to choose image";
               (span as HTMLElement).style.color = file ? "#b58a66" : "#8b684e";
             }
           }}
@@ -176,7 +274,11 @@ function FileInput({
   );
 }
 
-export default function NewRecipe({ actionData }: Route.ComponentProps) {
+export default function EditRecipe({
+  loaderData,
+  actionData,
+}: Route.ComponentProps) {
+  const { recipe } = loaderData;
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   useInactivityLogout();
@@ -204,7 +306,7 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
               color: "#f5f5f5",
             }}
           >
-            Add a Recipe
+            Edit Recipe
           </h1>
         </div>
         <div className="flex items-center gap-5">
@@ -253,6 +355,7 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
             encType="multipart/form-data"
             className="flex flex-col gap-8"
           >
+            {/* Name */}
             <div>
               <label
                 htmlFor="name"
@@ -266,7 +369,7 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
                 name="name"
                 type="text"
                 required
-                placeholder="e.g. Chocolate Chip Cookies"
+                defaultValue={recipe.name}
                 className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all"
                 style={{
                   background: "#2a241b",
@@ -288,10 +391,12 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
 
             <div className="border-t" style={{ borderColor: "#3a2818" }} />
 
+            {/* Dish image */}
             <FileInput
               name="dish_image"
               label="Dish Photo"
-              hint="A photo of the finished dish. If skipped, a placeholder will be shown."
+              hint="Leave blank to keep the current photo."
+              currentKey={recipe.dish_image}
             />
 
             <div
@@ -307,10 +412,30 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <FileInput name="card_image1" label="Recipe Card 1" required />
-              <FileInput name="card_image2" label="Recipe Card 2" />
-              <FileInput name="card_image3" label="Recipe Card 3" />
-              <FileInput name="card_image4" label="Recipe Card 4" />
+              <FileInput
+                name="card_image1"
+                label="Recipe Card 1"
+                hint="Leave blank to keep current."
+                currentKey={recipe.card_image1}
+              />
+              <FileInput
+                name="card_image2"
+                label="Recipe Card 2"
+                hint="Leave blank to keep current."
+                currentKey={recipe.card_image2}
+              />
+              <FileInput
+                name="card_image3"
+                label="Recipe Card 3"
+                hint="Leave blank to keep current."
+                currentKey={recipe.card_image3}
+              />
+              <FileInput
+                name="card_image4"
+                label="Recipe Card 4"
+                hint="Leave blank to keep current."
+                currentKey={recipe.card_image4}
+              />
             </div>
 
             <div className="pt-4 flex items-center gap-4">
@@ -330,7 +455,7 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
                       "#9f6b43";
                 }}
               >
-                {isSubmitting ? "Saving…" : "Save Recipe"}
+                {isSubmitting ? "Saving…" : "Save Changes"}
               </button>
               {isSubmitting && (
                 <p className="text-sm font-light" style={{ color: "#8b684e" }}>

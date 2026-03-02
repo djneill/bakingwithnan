@@ -8,4 +8,6 @@ export default [
   route("/recipes/:slug", "routes/recipe.$slug.tsx"),
   route("/api/images/:key", "routes/api.images.$key.tsx"),
   route("admin/recipes/new", "routes/admin.recipes.new.tsx"),
+  route("admin/recipes/:slug/edit", "routes/admin.recipes.$slug.edit.tsx"),
+  route("admin/logout", "routes/admin.logout.tsx"),
 ] satisfies RouteConfig;

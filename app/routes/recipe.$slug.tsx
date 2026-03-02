@@ -1,13 +1,13 @@
 import { useLoaderData, Link, data } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
-import type { Route } from "./+types/recipe";
+import type { Route } from "./+types/recipes.$slug";
 
-export function links(): Route.LinkDescriptors {
+export function links() {
   return [
     {
       rel: "stylesheet",
-      href: "https://fonts.googleapis.com/css2?family=Pacifico&family=Caveat:wght@400;600&family=Special+Elite&display=swap",
+      href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@300;400;500;600&family=Caveat:wght@400;600&display=swap",
     },
   ];
 }
@@ -39,19 +39,23 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     .bind(params.slug)
     .first<Recipe>();
 
-  if (!recipe) {
-    throw data("Recipe not found", { status: 404 });
-  }
+  if (!recipe) throw data("Recipe not found", { status: 404 });
 
   return { recipe };
 }
 
 // --- Meta ---
 export function meta({ data }: Route.MetaArgs) {
-  return [{ title: `${data?.recipe?.name ?? "Recipe"} — Baking with Nan` }];
+  return [
+    { title: `${data?.recipe?.name ?? "Recipe"} — Baking with Nan` },
+    {
+      name: "description",
+      content: `Nan's recipe for ${data?.recipe?.name ?? "a classic dish"}.`,
+    },
+  ];
 }
 
-// --- Recipe Card Image Viewer ---
+// --- Card Viewer ---
 function RecipeCardViewer({ keys }: { keys: (string | null)[] }) {
   const validKeys = keys.filter(Boolean) as string[];
   const [active, setActive] = useState(0);
@@ -61,30 +65,29 @@ function RecipeCardViewer({ keys }: { keys: (string | null)[] }) {
 
   return (
     <div>
-      {/* Main card */}
+      {/* Main card — polaroid style */}
       <motion.div
         key={active}
-        initial={{ opacity: 0, scale: 0.96 }}
+        initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="relative cursor-zoom-in"
+        className="relative cursor-zoom-in mx-auto"
+        style={{ maxWidth: "560px" }}
         onClick={() => setLightbox(true)}
       >
         <div
-          className="bg-[#2a241b] shadow-xl p-3 pb-10 mx-auto"
+          className="bg-white p-3 pb-12 relative"
           style={{
-            maxWidth: "520px",
-            boxShadow: "4px 6px 16px rgba(0,0,0,0.6)",
-            position: "relative",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)",
           }}
         >
           {/* Thumbtack */}
           <div
-            className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 w-5 h-5 rounded-full"
+            className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 w-6 h-6 rounded-full"
             style={{
               background:
-                "radial-gradient(circle at 35% 35%, #9f6b43, #3a2818)",
-              boxShadow: "1px 2px 4px rgba(0,0,0,0.8)",
+                "radial-gradient(circle at 35% 35%, #ef4444, #7f1d1d)",
+              boxShadow: "1px 2px 6px rgba(0,0,0,0.5)",
             }}
           />
           <img
@@ -92,32 +95,46 @@ function RecipeCardViewer({ keys }: { keys: (string | null)[] }) {
             alt={`Recipe card ${active + 1}`}
             className="w-full h-auto"
           />
+          {/* Hint */}
           <p
-            className="absolute bottom-2 right-3 text-[#a3978c] text-xs"
-            style={{ fontFamily: "'Caveat', cursive" }}
+            className="absolute bottom-3 right-4 text-xs"
+            style={{ fontFamily: "'Caveat', cursive", color: "#aaa" }}
           >
             click to enlarge
           </p>
+          {/* Card number */}
+          {validKeys.length > 1 && (
+            <p
+              className="absolute bottom-3 left-4 text-xs"
+              style={{ fontFamily: "'Caveat', cursive", color: "#aaa" }}
+            >
+              Card {active + 1} of {validKeys.length}
+            </p>
+          )}
         </div>
       </motion.div>
 
       {/* Thumbnails */}
       {validKeys.length > 1 && (
-        <div className="flex gap-3 justify-center mt-4">
+        <div className="flex gap-3 justify-center mt-6">
           {validKeys.map((key, i) => (
             <button
               key={key}
               onClick={() => setActive(i)}
-              className={`border-4 transition-all ${i === active
-                  ? "border-[#b58a66] scale-105"
-                  : "border-[#3a2818] opacity-70 hover:opacity-100"
-                }`}
-              style={{ boxShadow: "2px 2px 6px rgba(0,0,0,0.3)" }}
+              className="transition-all overflow-hidden"
+              style={{
+                border:
+                  i === active ? "3px solid #9f6b43" : "3px solid #3a2818",
+                transform: i === active ? "scale(1.08)" : "scale(1)",
+                boxShadow:
+                  i === active ? "0 4px 12px rgba(159,107,67,0.4)" : "none",
+                borderRadius: "4px",
+              }}
             >
               <img
                 src={`/api/images/${key}`}
                 alt={`Card ${i + 1}`}
-                className="w-16 h-16 object-cover"
+                className="w-16 h-16 object-cover block"
               />
             </button>
           ))}
@@ -129,23 +146,46 @@ function RecipeCardViewer({ keys }: { keys: (string | null)[] }) {
         {lightbox && (
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: "rgba(0,0,0,0.88)" }}
+            style={{ background: "rgba(0,0,0,0.92)" }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setLightbox(false)}
           >
-            <motion.img
-              src={`/api/images/${validKeys[active]}`}
-              alt="Recipe card enlarged"
-              className="max-w-full max-h-full rounded shadow-2xl"
-              initial={{ scale: 0.85 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.85 }}
+            <motion.div
+              className="bg-white p-2 pb-8"
+              style={{
+                maxWidth: "90vw",
+                maxHeight: "90vh",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+              }}
+              initial={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.88, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-            />
+            >
+              <img
+                src={`/api/images/${validKeys[active]}`}
+                alt="Recipe card enlarged"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "80vh",
+                  objectFit: "contain",
+                  display: "block",
+                }}
+              />
+            </motion.div>
             <button
-              className="absolute top-4 right-4 text-white text-3xl font-bold opacity-70 hover:opacity-100"
+              className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full transition-colors text-white text-xl"
+              style={{ background: "rgba(255,255,255,0.1)" }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLElement).style.background =
+                  "rgba(255,255,255,0.2)")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLElement).style.background =
+                  "rgba(255,255,255,0.1)")
+              }
               onClick={() => setLightbox(false)}
             >
               ✕
@@ -170,137 +210,155 @@ export default function RecipePage() {
 
   const dishImageUrl = recipe.dish_image
     ? `/api/images/${recipe.dish_image}`
-    : "/coming-soon.jpg";
+    : null;
 
   return (
     <div
       className="min-h-screen"
-      style={{
-        background: "#1c1b1a",
-        backgroundImage: `
-          repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 31px,
-            rgba(222, 222, 222, 0.03) 31px,
-            rgba(222, 222, 222, 0.03) 32px
-          )
-        `,
-      }}
+      style={{ backgroundColor: "#1c1b1a", fontFamily: "'Outfit', sans-serif" }}
     >
       {/* Nav */}
-      <div
-        className="py-3 px-6"
-        style={{ background: "#2a241b", borderBottom: "3px solid #9f6b43" }}
-      >
+      <header className="border-b px-8 py-5" style={{ borderColor: "#3a2818" }}>
         <Link
           to="/"
-          className="text-[#b58a66] hover:text-[#dedede] transition-colors flex items-center gap-2"
-          style={{ fontFamily: "'Special Elite', cursive" }}
+          className="text-sm transition-colors flex items-center gap-2 w-fit"
+          style={{ color: "#8b684e" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#dedede")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#8b684e")}
         >
-          ← Back to Nan's Kitchen
+          ← Nan's Kitchen
         </Link>
-      </div>
+      </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-10">
+      <main className="max-w-3xl mx-auto px-6 py-14">
         {/* Title */}
-        <motion.h1
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
-          style={{
-            fontFamily: "'Pacifico', cursive",
-            fontSize: "clamp(2rem, 6vw, 3.5rem)",
-            color: "#f5f5f5",
-            textShadow: "1px 2px 0 rgba(0,0,0,0.5)",
-          }}
-        >
-          {recipe.name}
-        </motion.h1>
-
-        {/* Dish photo polaroid */}
-        <motion.div
-          initial={{ opacity: 0, rotate: -2 }}
-          animate={{ opacity: 1, rotate: 0 }}
-          transition={{ delay: 0.1 }}
-          className="flex justify-center mb-10"
-        >
-          <div
-            className="bg-[#2a241b] p-3 pb-10 shadow-xl relative"
-            style={{
-              maxWidth: "300px",
-              transform: "rotate(-1.5deg)",
-              boxShadow: "4px 5px 16px rgba(0,0,0,0.6)",
-            }}
-          >
-            {/* Thumbtack */}
-            <div
-              className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 w-5 h-5 rounded-full"
-              style={{
-                background:
-                  "radial-gradient(circle at 35% 35%, #9f6b43, #3a2818)",
-                boxShadow: "1px 2px 4px rgba(0,0,0,0.8)",
-              }}
-            />
-            <img
-              src={dishImageUrl}
-              alt={recipe.name}
-              className="w-full aspect-square object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "/coming-soon.jpg";
-              }}
-            />
-            <p
-              className="absolute bottom-2 left-0 right-0 text-center text-[#dedede]"
-              style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem" }}
-            >
-              {recipe.name}
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Recipe cards section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12"
         >
-          <h2
-            className="text-center mb-6 text-[#dedede]"
+          <p
+            className="text-xs tracking-[0.2em] uppercase mb-3"
+            style={{ color: "#9f6b43" }}
+          >
+            Nan's Recipe
+          </p>
+          <h1
+            className="text-[#f5f5f5]"
             style={{
-              fontFamily: "'Special Elite', cursive",
-              fontSize: "1.3rem",
+              fontFamily: "'Playfair Display', serif",
+              fontSize: "clamp(2.2rem, 7vw, 4rem)",
+              lineHeight: 1.15,
+              fontWeight: 500,
             }}
           >
-            Nan's Recipe Cards
-          </h2>
-          <RecipeCardViewer keys={cardKeys} />
+            {recipe.name}
+          </h1>
         </motion.div>
 
-        {/* No cards fallback */}
-        {cardKeys.every((k) => !k) && (
-          <div className="text-center py-10">
-            <p
-              className="text-2xl text-[#a3978c]"
-              style={{ fontFamily: "'Caveat', cursive" }}
+        {/* Dish photo */}
+        {dishImageUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.6 }}
+            className="flex justify-center mb-14"
+          >
+            <div
+              className="bg-white p-3 pb-10 relative"
+              style={{
+                maxWidth: "280px",
+                transform: "rotate(-1.5deg)",
+                boxShadow:
+                  "0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)",
+              }}
             >
-              Recipe cards coming soon! 🍰
-            </p>
-          </div>
+              {/* Thumbtack */}
+              <div
+                className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 w-6 h-6 rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle at 35% 35%, #ef4444, #7f1d1d)",
+                  boxShadow: "1px 2px 6px rgba(0,0,0,0.5)",
+                }}
+              />
+              <img
+                src={dishImageUrl}
+                alt={recipe.name}
+                className="w-full aspect-square object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement)
+                    .closest("div.bg-white")!
+                    .remove();
+                }}
+              />
+              <p
+                className="absolute bottom-2.5 left-0 right-0 text-center"
+                style={{
+                  fontFamily: "'Caveat', cursive",
+                  fontSize: "1rem",
+                  color: "#888",
+                }}
+              >
+                {recipe.name}
+              </p>
+            </div>
+          </motion.div>
         )}
+
+        {/* Divider */}
+        <motion.div
+          initial={{ opacity: 0, scaleX: 0 }}
+          animate={{ opacity: 1, scaleX: 1 }}
+          transition={{ delay: 0.25, duration: 0.5 }}
+          className="flex items-center gap-4 mb-12"
+        >
+          <div className="flex-1 h-px" style={{ background: "#3a2818" }} />
+          <p
+            className="text-xs tracking-[0.2em] uppercase flex-shrink-0"
+            style={{ color: "#9f6b43" }}
+          >
+            Recipe Cards
+          </p>
+          <div className="flex-1 h-px" style={{ background: "#3a2818" }} />
+        </motion.div>
+
+        {/* Recipe cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+        >
+          <RecipeCardViewer keys={cardKeys} />
+
+          {cardKeys.every((k) => !k) && (
+            <div className="text-center py-16">
+              <p
+                className="text-2xl italic"
+                style={{
+                  fontFamily: "'Playfair Display', serif",
+                  color: "#b58a66",
+                }}
+              >
+                Recipe cards coming soon...
+              </p>
+            </div>
+          )}
+        </motion.div>
       </main>
 
       {/* Footer */}
       <footer
-        className="mt-16 py-6 text-center text-sm"
-        style={{
-          background: "#161514",
-          borderTop: "4px solid #3a2818",
-          color: "#8b684e",
-          fontFamily: "'Special Elite', cursive",
-        }}
+        className="mt-20 py-10 text-center border-t"
+        style={{ borderColor: "#3a2818", background: "#161514" }}
       >
-        <p>Made with love for Nan's family 🍰</p>
+        <p
+          className="italic text-sm"
+          style={{ fontFamily: "'Playfair Display', serif", color: "#8b684e" }}
+        >
+          Her recipes live on forever.
+        </p>
       </footer>
     </div>
   );
