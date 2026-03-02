@@ -27,7 +27,6 @@ export function meta({ data, matches }: Route.MetaArgs) {
 	return [
 		{ title: "Baking with Nan" },
 		{ name: "description", content: "A lifetime of love, baked into every recipe." },
-		{ name: "robots", content: "noindex" },
 		{ property: "og:type", content: "website" },
 		{ property: "og:title", content: "Baking with Nan" },
 		{ property: "og:description", content: "A lifetime of love, baked into every recipe." },

@@ -7,6 +7,8 @@ import { PolaroidPhoto } from "~/components/ui/PolaroidPhoto";
 import { SectionDivider } from "~/components/ui/SectionDivider";
 import { RecipeCardViewer } from "~/components/recipe/RecipeCardViewer";
 
+type RootLoaderData = { origin: string };
+
 export async function loader({ params, context }: Route.LoaderArgs) {
   const db = context.cloudflare.env.bakingwithnan_db;
 
@@ -25,13 +27,35 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   return { recipe };
 }
 
-export function meta({ data }: Route.MetaArgs) {
+export function meta({ data, params, matches }: Route.MetaArgs) {
+  const rootMatch = matches?.find((m) => m?.id === "root");
+  const rootData = rootMatch?.data as RootLoaderData | undefined;
+  const origin = rootData?.origin ?? "";
+
+  const recipeName = data?.recipe?.name ?? "Recipe";
+  const description = `Nan's recipe for ${data?.recipe?.name ?? "a classic dish"}.`;
+  const pagePath = `/recipes/${params.slug ?? ""}`.replace(/\/$/, "");
+  const pageUrl = origin ? `${origin}${pagePath || "/"}` : pagePath || "/";
+
+  const imagePath = data?.recipe?.dish_image
+    ? `/api/images/${data.recipe.dish_image}`
+    : "/openGraph.png";
+  const imageUrl = origin ? `${origin}${imagePath}` : imagePath;
+
   return [
-    { title: `${data?.recipe?.name ?? "Recipe"} — Baking with Nan` },
+    { title: `${recipeName} — Baking with Nan` },
     {
       name: "description",
-      content: `Nan's recipe for ${data?.recipe?.name ?? "a classic dish"}.`,
+      content: description,
     },
+    { name: "robots", content: "noindex" },
+    { property: "og:type", content: "article" },
+    { property: "og:title", content: `${recipeName} — Baking with Nan` },
+    { property: "og:description", content: description },
+    { property: "og:image", content: imageUrl },
+    { property: "og:url", content: pageUrl },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:image", content: imageUrl },
   ];
 }
 

@@ -9,13 +9,33 @@ import { SearchBar } from "~/components/home/SearchBar";
 import { RecipeCard } from "~/components/home/RecipeCard";
 import { SiteFooter } from "~/components/home/SiteFooter";
 
-export function meta({}: Route.MetaArgs) {
+type RootLoaderData = { origin: string };
+
+export function meta({ matches }: Route.MetaArgs) {
+  const rootMatch = matches?.find((m) => m?.id === "root");
+  const rootData = rootMatch?.data as RootLoaderData | undefined;
+  const origin = rootData?.origin ?? "";
+
+  const imageUrl = origin ? `${origin}/openGraph.png` : "/openGraph.png";
+  const pageUrl = origin ? `${origin}/` : "/";
+
   return [
     { title: "Baking with Nan" },
     {
       name: "description",
       content: "A lifetime of love, baked into every recipe.",
     },
+    { name: "robots", content: "noindex" },
+    { property: "og:type", content: "website" },
+    { property: "og:title", content: "Baking with Nan" },
+    {
+      property: "og:description",
+      content: "A lifetime of love, baked into every recipe.",
+    },
+    { property: "og:image", content: imageUrl },
+    { property: "og:url", content: pageUrl },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:image", content: imageUrl },
   ];
 }
 
