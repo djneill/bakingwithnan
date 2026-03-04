@@ -7,13 +7,19 @@ import type { Route } from "./+types/api.images.$";
  * Supports keys with folder prefixes, e.g. "dishes/abc123.jpg" or
  * "cards/abc123.jpg", which are stored as-is in R2.
  */
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ request, params, context }: Route.LoaderArgs) {
   const r2 = context.cloudflare.env.bakingwithnan_images;
   const key = params["*"];
 
   if (!key) {
     return new Response("Not found", { status: 404 });
   }
+
+  // Check Cloudflare edge cache before hitting R2 (avoids Class B operations)
+  const cache = (caches as unknown as { default: Cache }).default;
+  const cacheKey = new Request(request.url, { method: "GET" });
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
 
   const object = await r2.get(key);
 
@@ -45,5 +51,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   headers.set("cache-control", "public, max-age=31536000, immutable");
   headers.set("etag", object.httpEtag);
 
-  return new Response(object.body, { headers });
+  const response = new Response(object.body, { headers });
+
+  // Store in Cloudflare edge cache (async, non-blocking)
+  context.cloudflare.ctx.waitUntil(cache.put(cacheKey, response.clone()));
+
+  return response;
 }
