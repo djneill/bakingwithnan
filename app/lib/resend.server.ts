@@ -15,7 +15,7 @@ export async function sendMagicLinkEmail({
   const magicLink = `${baseUrl}/admin/verify?token=${token}`;
 
   await resend.emails.send({
-    from: "Baking with Nan <noreply@djneill.dev>",
+    from: "Baking with Nan <noreply@centraltexaswebdesigns.com>",
     to,
     subject: "Your login link for Baking with Nan",
     html: `
